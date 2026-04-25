@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { nanoid } from 'nanoid'
-import { ArrowRight, LogOut, Pencil, Radio, RefreshCw, Shield, Sparkles, Zap } from 'lucide-react'
+import { ArrowRight, LogOut, Pencil, Radio, RefreshCw, Shield, Zap } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useMyRooms } from '@/hooks/useMyRooms'
 import { useMyProfile } from '@/hooks/useMyProfile'
@@ -138,14 +138,9 @@ export function HomePage() {
   const { rooms, loading, error, refetch } = useMyRooms(auth.status === 'signed_in')
   const signedIn = auth.status === 'signed_in'
   const profile = useMyProfile()
-  const usernameLabel = useMemo(() => {
-    if (auth.status !== 'signed_in') return null
-    return profile.username ?? getUsernameLabel(auth.user)
-  }, [auth])
-  const emailLabel = useMemo(() => {
-    if (auth.status !== 'signed_in') return null
-    return auth.user.email ?? null
-  }, [auth])
+  const usernameLabel =
+    auth.status === 'signed_in' ? (profile.username ?? getUsernameLabel(auth.user)) : null
+  const emailLabel = auth.status === 'signed_in' ? (auth.user.email ?? null) : null
 
   const [nameEdit, setNameEdit] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
@@ -181,7 +176,6 @@ export function HomePage() {
       navigate(from, { replace: true })
     }
   }, [auth.status, location.state, navigate])
-
 
   return (
     <main className="app-noise min-h-dvh bg-zinc-950 text-zinc-50">

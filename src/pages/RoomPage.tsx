@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -17,6 +18,21 @@ export function RoomPage() {
   const userId = auth.status === 'signed_in' ? auth.user.id : ''
   const join = useRoomJoin(roomId ?? '', userId)
   const requestUsername = auth.status === 'signed_in' ? (profile.username ?? getUsernameLabel(auth.user)) : ''
+  const [requesting, setRequesting] = useState(false)
+  const [requestError, setRequestError] = useState<string | null>(null)
+
+  const submitJoinRequest = async (roomId: string) => {
+    setRequestError(null)
+    setRequesting(true)
+    try {
+      await requestJoinRoom(roomId, requestUsername)
+      await join.refetch()
+    } catch (e: unknown) {
+      setRequestError(e instanceof Error ? e.message : 'Could not request access')
+    } finally {
+      setRequesting(false)
+    }
+  }
 
   return (
     <main className="app-noise h-dvh min-h-0 overflow-hidden bg-zinc-950 text-zinc-50">
@@ -84,26 +100,30 @@ export function RoomPage() {
                           <button
                             type="button"
                             className="inline-flex w-full items-center justify-center rounded-xl bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-white"
+                            disabled={requesting}
                             onClick={() => {
-                              void requestJoinRoom(room.id, requestUsername).then(() => void join.refetch())
+                              void submitJoinRequest(room.id)
                             }}
                           >
-                            Request again
+                            {requesting ? 'Requesting…' : 'Request again'}
                           </button>
                         </div>
                       ) : (
                         <button
                           type="button"
                           className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-white"
+                          disabled={requesting}
                           onClick={() => {
-                            void requestJoinRoom(room.id, requestUsername).then(() => void join.refetch())
+                            void submitJoinRequest(room.id)
                           }}
                         >
-                          Request access
+                          {requesting ? 'Requesting…' : 'Request access'}
                         </button>
                       )}
 
-                      {join.error ? <div className="mt-3 text-xs text-rose-300">{join.error}</div> : null}
+                      {join.error || requestError ? (
+                        <div className="mt-3 text-xs text-rose-300">{join.error ?? requestError}</div>
+                      ) : null}
                     </div>
                   </div>
                 )}

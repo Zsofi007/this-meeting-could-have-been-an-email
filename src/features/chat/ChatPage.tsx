@@ -22,6 +22,7 @@ export function ChatPage(props: {
   roomName?: string
   onRoomNameUpdated?: (name: string) => void
 }) {
+  const { roomId, roomName, onRoomNameUpdated } = props
   const navigate = useNavigate()
   const { auth } = useAuth()
   const profile = useMyProfile()
@@ -33,22 +34,22 @@ export function ChatPage(props: {
   }, [auth, profile.username])
 
   const messages = useMessages({
-    roomId: props.roomId,
+    roomId,
     userId: identity?.userId ?? '',
     username: identity?.username ?? 'User',
   })
 
   const presence = usePresence({
-    roomId: props.roomId,
+    roomId,
     userId: identity?.userId ?? '',
     username: identity?.username ?? 'User',
   })
 
-  const members = useRoomMembers(props.roomId)
+  const members = useRoomMembers(roomId)
   const [peopleOpen, setPeopleOpen] = useState(false)
 
   // Keep this running so we can badge the People button in realtime.
-  const pending = usePendingJoinRequests(props.roomId, true)
+  const pending = usePendingJoinRequests(roomId, true)
 
   const onlineById = useMemo(() => new Map(presence.users.map((u) => [u.userId, u.username])), [presence.users])
 
@@ -82,10 +83,10 @@ export function ChatPage(props: {
 
   const onSaveRoomName = useCallback(
     async (name: string) => {
-      await setRoomName(props.roomId, name)
-      props.onRoomNameUpdated?.(name)
+      await setRoomName(roomId, name)
+      onRoomNameUpdated?.(name)
     },
-    [props.roomId, props.onRoomNameUpdated],
+    [roomId, onRoomNameUpdated],
   )
 
   const onLeaveRoom = useCallback(async () => {
@@ -94,21 +95,21 @@ export function ChatPage(props: {
     try {
       if (identity) {
         await sendMessage({
-          roomId: props.roomId,
+          roomId,
           userId: identity.userId,
           username: identity.username,
           text: `${identity.username} left the room`,
           clientId: nanoid(12),
         })
       }
-      await leaveRoom(props.roomId)
+      await leaveRoom(roomId)
       left = true
     } catch (e) {
       setLeaveError(e instanceof Error ? e.message : 'Could not leave room')
     } finally {
       if (left) void navigate('/')
     }
-  }, [identity, navigate, props.roomId])
+  }, [identity, navigate, roomId])
 
   if (auth.status !== 'signed_in' || !identity) return null
 
@@ -120,8 +121,8 @@ export function ChatPage(props: {
         </div>
       ) : null}
       <RoomHeader
-        roomId={props.roomId}
-        roomName={props.roomName}
+        roomId={roomId}
+        roomName={roomName}
         realtimeLabel={messages.realtime === 'connected' ? 'Live' : 'Reconnecting…'}
         onlineCount={presence.users.length}
         pendingCount={pending.requests.length}
@@ -140,10 +141,10 @@ export function ChatPage(props: {
           username: r.requested_username ?? r.user_id,
         }))}
         onApprove={(userId) => {
-          void decideJoinRequest(props.roomId, userId, 'approved')
+          void decideJoinRequest(roomId, userId, 'approved')
         }}
         onReject={(userId) => {
-          void decideJoinRequest(props.roomId, userId, 'rejected')
+          void decideJoinRequest(roomId, userId, 'rejected')
         }}
         error={members.error}
         onClose={() => setPeopleOpen(false)}

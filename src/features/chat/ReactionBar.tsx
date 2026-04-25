@@ -14,7 +14,7 @@ export function ReactionBar(props: {
     <div className="mt-0.5 flex flex-wrap items-center gap-1.5 sm:mt-1">
       {props.reactions.map((r) => (
         <motion.button
-          key={`${r.emoji}-${r.count}`}
+          key={r.emoji}
           layout
           type="button"
           className={clsx(

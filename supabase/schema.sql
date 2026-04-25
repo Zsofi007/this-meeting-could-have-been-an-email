@@ -34,6 +34,39 @@ create unique index if not exists messages_room_client_id_uniq
   on public.messages (room_id, client_id)
   where client_id is not null;
 
+-- Prevent updates from changing immutable message identity fields.
+-- RLS policies cannot compare OLD vs NEW, so this trigger closes that gap.
+create or replace function public.enforce_message_immutable_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.room_id <> old.room_id then
+    raise exception 'room_id is immutable' using errcode = '22000';
+  end if;
+  if new.user_id <> old.user_id then
+    raise exception 'user_id is immutable' using errcode = '22000';
+  end if;
+  if new.created_at <> old.created_at then
+    raise exception 'created_at is immutable' using errcode = '22000';
+  end if;
+  if new.client_id is distinct from old.client_id then
+    raise exception 'client_id is immutable' using errcode = '22000';
+  end if;
+  if new.username <> old.username then
+    raise exception 'username is immutable' using errcode = '22000';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists messages_enforce_immutable on public.messages;
+create trigger messages_enforce_immutable
+before update on public.messages
+for each row execute function public.enforce_message_immutable_fields();
+
 -- Reactions
 create table if not exists public.message_reactions (
   message_id uuid not null references public.messages (id) on delete cascade,
@@ -292,8 +325,8 @@ drop policy if exists "messages_update_owner" on public.messages;
 create policy "messages_update_owner"
 on public.messages for update
 to authenticated
-using (user_id = auth.uid())
-with check (user_id = auth.uid());
+using (user_id = auth.uid() and public.is_room_member(room_id, (select auth.uid())))
+with check (user_id = auth.uid() and public.is_room_member(room_id, (select auth.uid())));
 
 -- Reactions policies
 drop policy if exists "message_reactions_select_authenticated" on public.message_reactions;
@@ -312,13 +345,25 @@ drop policy if exists "message_reactions_insert_self" on public.message_reaction
 create policy "message_reactions_insert_self"
 on public.message_reactions for insert
 to authenticated
-with check (user_id = auth.uid());
+with check (
+  user_id = auth.uid()
+  and public.is_room_member(
+    (select m.room_id from public.messages m where m.id = message_id),
+    auth.uid()
+  )
+);
 
 drop policy if exists "message_reactions_delete_self" on public.message_reactions;
 create policy "message_reactions_delete_self"
 on public.message_reactions for delete
 to authenticated
-using (user_id = auth.uid());
+using (
+  user_id = auth.uid()
+  and public.is_room_member(
+    (select m.room_id from public.messages m where m.id = message_id),
+    auth.uid()
+  )
+);
 
 drop policy if exists "dismissals_select_own" on public.user_room_dismissals;
 create policy "dismissals_select_own"

@@ -7,6 +7,30 @@ export type AuthState =
   | { status: 'signed_out' }
   | { status: 'signed_in'; user: User; session: Session }
 
+function isSupabaseAuthCallbackUrl() {
+  // Implicit flow: access_token in hash; PKCE flow: code in search params.
+  return (
+    (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('code'))
+  )
+}
+
+function stripAuthParamsFromUrl() {
+  // Remove sensitive tokens/code from the URL after session is established.
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  url.hash = ''
+  url.searchParams.delete('code')
+  url.searchParams.delete('state')
+  window.history.replaceState({}, '', `${url.pathname}${url.search}`)
+}
+
+function getSafeRedirectTo() {
+  // Never include hash in redirectTo; otherwise callback becomes "##access_token=..."
+  const { origin, pathname, search } = window.location
+  return `${origin}${pathname}${search}`
+}
+
 export function useAuth(): {
   auth: AuthState
   signInWithGoogle: (options?: { redirectTo?: string }) => Promise<void>
@@ -19,21 +43,38 @@ export function useAuth(): {
 
   useEffect(() => {
     let alive = true
+    const isCallback = isSupabaseAuthCallbackUrl()
+
+    // If we're on the OAuth callback URL, keep the app in loading state briefly so
+    // route guards don't redirect away before Supabase processes the tokens.
+    let callbackTimeout: number | null = null
+    if (isCallback) {
+      callbackTimeout = window.setTimeout(() => {
+        if (!alive) return
+        setLoading(false)
+      }, 2500)
+    }
 
     supabase.auth.getSession().then(({ data, error }) => {
       if (!alive) return
-      if (error) throw error
+      if (error) {
+        setSession(null)
+        setLoading(false)
+        return
+      }
       setSession(data.session ?? null)
       setLoading(false)
     })
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession)
+      if (nextSession && isCallback) stripAuthParamsFromUrl()
       setLoading(false)
     })
 
     return () => {
       alive = false
+      if (callbackTimeout != null) window.clearTimeout(callbackTimeout)
       data.subscription.unsubscribe()
     }
   }, [])
@@ -49,7 +90,7 @@ export function useAuth(): {
     signInWithGoogle: async (options) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: options?.redirectTo ?? window.location.href },
+        options: { redirectTo: options?.redirectTo ?? getSafeRedirectTo() },
       })
       if (error) throw error
     },

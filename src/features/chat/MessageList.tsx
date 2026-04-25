@@ -11,6 +11,10 @@ function getCreatedAt(item: UiMessage) {
   return item.kind === 'db' ? item.message.created_at : item.createdAt
 }
 
+function getStableKey(item: UiMessage) {
+  return item.kind === 'db' ? `db:${item.message.id}` : `ui:${item.clientId}`
+}
+
 export function MessageList(props: {
   items: UiMessage[]
   viewerUserId: string
@@ -36,7 +40,7 @@ export function MessageList(props: {
       const prev = items[idx - 1]
       const showMeta = !prev || getUserId(prev) !== getUserId(item)
       const isMine = getUserId(item) === viewerUserId
-      return { key: `${idx}:${getCreatedAt(item)}`, item, isMine, showMeta }
+      return { key: getStableKey(item), item, isMine, showMeta }
     })
   }, [items, viewerUserId])
 

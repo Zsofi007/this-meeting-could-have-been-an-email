@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { LogIn, UserPlus } from 'lucide-react'
+import { FcGoogle } from 'react-icons/fc'
 import { useAuth } from '@/hooks/useAuth'
 
 type Mode = 'sign_in' | 'sign_up'
@@ -22,7 +23,7 @@ export function EmailAuthCard() {
   const oauthRedirectTo = useMemo(() => {
     const from = (location.state as { from?: string } | null)?.from
     if (from && typeof from === 'string' && from.startsWith('/')) return `${window.location.origin}${from}`
-    return window.location.href
+    return `${window.location.origin}${window.location.pathname}${window.location.search}`
   }, [location.state])
 
   const disabled = pending || auth.status === 'loading'
@@ -74,7 +75,7 @@ export function EmailAuthCard() {
         onClick={() => void signInWithGoogle({ redirectTo: oauthRedirectTo })}
         disabled={disabled}
       >
-        <LogIn className="h-4 w-4" />
+        <FcGoogle className="h-4 w-4" aria-hidden />
         Continue with Google
       </button>
 
