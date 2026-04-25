@@ -194,7 +194,7 @@ export function HomePage() {
             </h1>
             <p className="mt-3 max-w-prose text-pretty text-sm leading-relaxed text-zinc-400 md:text-base">
               {signedIn
-                ? 'Open any room to continue the thread, or start a new one. Share a link; everyone with the link can read (sign in to send).'
+                ? 'Open a thread or start a new one. Share a link to invite others in.'
                 : 'Create a room, share a URL, and keep the conversation in one place — realtime messages, presence, and reactions, without a calendar block.'}
             </p>
           </div>
@@ -290,19 +290,15 @@ export function HomePage() {
                   <ul className="mt-3 space-y-2.5 text-sm text-zinc-500">
                     <li className="flex items-start gap-2.5">
                       <Radio className="mt-0.5 h-4 w-4 shrink-0 text-zinc-600" aria-hidden />
-                      Live channel status & who’s around
+                      Live presence and room activity
                     </li>
                     <li className="flex items-start gap-2.5">
                       <Zap className="mt-0.5 h-4 w-4 shrink-0 text-zinc-600" aria-hidden />
-                      Fast optimistic sends, edits, and reactions
+                      Instant, optimistic messaging (with edits and reactions)
                     </li>
                     <li className="flex items-start gap-2.5">
                       <Shield className="mt-0.5 h-4 w-4 shrink-0 text-zinc-600" aria-hidden />
-                      RLS on Supabase — you own what you post
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-zinc-600" aria-hidden />
-                      No shared calendar. Just the thread.
+                      Secure by design — you control your own messages
                     </li>
                   </ul>
                 </div>
